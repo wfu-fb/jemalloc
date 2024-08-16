@@ -2957,6 +2957,22 @@ sub RemoveUninterestingFrames {
                       '@JEMALLOC_PREFIX@malloc',
                       'newImpl',
                       'void* newImpl',
+                      'fallbackNewImpl',
+                      'void* fallbackNewImpl',
+                      'fallback_impl',
+                      'void* fallback_impl',
+                      'imalloc',
+                      'int imalloc',
+                      'imalloc_body',
+                      'int imalloc_body',
+                      'prof_alloc_prep',
+                      'prof_tctx_t *prof_alloc_prep',
+                      'prof_backtrace_impl',
+                      'void prof_backtrace_impl',
+                      'je_prof_backtrace',
+                      'void je_prof_backtrace',
+                      'je_prof_tctx_create',
+                      'prof_tctx_t* prof_tctx_create',
                       '@JEMALLOC_PREFIX@free',
                       '@JEMALLOC_PREFIX@memalign',
                       '@JEMALLOC_PREFIX@posix_memalign',
@@ -2965,7 +2981,12 @@ sub RemoveUninterestingFrames {
                       '@JEMALLOC_PREFIX@valloc',
                       '@JEMALLOC_PREFIX@realloc',
                       '@JEMALLOC_PREFIX@mallocx',
+                      'irallocx_prof',
+                      'void *irallocx_prof',
                       '@JEMALLOC_PREFIX@rallocx',
+                      'do_rallocx',
+                      'ixallocx_prof',
+                      'size_t ixallocx_prof',
                       '@JEMALLOC_PREFIX@xallocx',
                       '@JEMALLOC_PREFIX@dallocx',
                       '@JEMALLOC_PREFIX@sdallocx',
@@ -3078,6 +3099,8 @@ sub RemoveUninterestingFrames {
     foreach my $a (@addrs) {
       if (exists($symbols->{$a})) {
         my $func = $symbols->{$a}->[0];
+        # Remove suffix in the symbols following space when filtering.
+        $func =~ s/ .*//;
         if ($skip{$func} || ($func =~ m/$skip_regexp/)) {
           # Throw away the portion of the backtrace seen so far, under the
           # assumption that previous frames were for functions internal to the
@@ -4500,19 +4523,19 @@ sub FindLibrary {
 # For libc libraries, the copy in /usr/lib/debug contains debugging symbols
 sub DebuggingLibrary {
   my $file = shift;
-      
+
   if ($file !~ m|^/|) {
     return undef;
   }
-      
+
   # Find debug symbol file if it's named after the library's name.
-  
-  if (-f "/usr/lib/debug$file") {                 
+
+  if (-f "/usr/lib/debug$file") {
     if($main::opt_debug) { print STDERR "found debug info for $file in /usr/lib/debug$file\n"; }
     return "/usr/lib/debug$file";
   } elsif (-f "/usr/lib/debug$file.debug") {
     if($main::opt_debug) { print STDERR "found debug info for $file in /usr/lib/debug$file.debug\n"; }
-    return "/usr/lib/debug$file.debug"; 
+    return "/usr/lib/debug$file.debug";
   }
 
   if(!$main::opt_debug_syms_by_id) {
@@ -4521,7 +4544,7 @@ sub DebuggingLibrary {
   }
 
   # Find debug file if it's named after the library's build ID.
-  
+
   my $readelf = '';
   if (!$main::gave_up_on_elfutils) {
     $readelf = qx/eu-readelf -n ${file}/;
